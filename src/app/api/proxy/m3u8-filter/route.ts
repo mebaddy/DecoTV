@@ -75,14 +75,21 @@ function buildProxyUrl(
   upstreamUrl: string,
   referer?: string,
 ): string {
+  const host = request.headers.get('host');
+  const protocol =
+    request.headers.get('x-forwarded-proto') ||
+    (() => {
+      try {
+        return new URL(request.url).protocol.replace(':', '');
+      } catch {
+        return 'http';
+      }
+    })();
   const signature = signM3U8ProxyRequest(upstreamUrl, referer);
-
   let qs = `url=${encodeURIComponent(upstreamUrl)}`;
   if (referer) qs += `&referer=${encodeURIComponent(referer)}`;
   if (signature) qs += `&sig=${encodeURIComponent(signature)}`;
-
-  // ✅ 关键：永远走当前域名（避免任何 host 污染）
-  return `/api/proxy/m3u8-filter?${qs}`;
+  return `${protocol}://${host}/api/proxy/m3u8-filter?${qs}`;
 }
 
 function shouldProxyMediaAssets(): boolean {
